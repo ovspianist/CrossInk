@@ -506,4 +506,6 @@ STR_NEARBY_POSITION_TIMEOUT: "La sincronització de posició ha excedit el temps
 STR_NEARBY_POSITION_NO_READER: "No s'ha trobat cap lector proper"
 STR_NEARBY_LABEL: "Proper:"
 STR_APPLY_NEARBY_POSITION: "Aplica la posició propera"
+STR_SWITCH_TO_APP0: "Canvia a l'app0"
+STR_SWITCH_TO_APP1: "Canvia a l'app1"
 STR_NEARBY_POSITION_SIMULATOR_UNAVAILABLE: "La sincronització de posició propera no està disponible en el simulador"

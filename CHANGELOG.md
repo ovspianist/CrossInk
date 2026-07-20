@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Added
+
+- System settings can switch to the alternate OTA app partition and restart into its firmware.
+
 ## [v1.4.0] - 2026-07-10
 
 ### Added

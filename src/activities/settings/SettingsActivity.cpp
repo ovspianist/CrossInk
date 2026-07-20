@@ -1,6 +1,7 @@
 #include "SettingsActivity.h"
 
 #include <GfxRenderer.h>
+#include <HalSystem.h>
 #include <Logging.h>
 
 #include <algorithm>
@@ -222,6 +223,14 @@ void SettingsActivity::rebuildSettingsLists() {
   readerFontSettings = buildReaderFontSettingsList(allSettings);
   readerPageLayoutSettings = buildReaderPageLayoutSettingsList(allSettings);
   systemSettings = buildSystemSettingsParentList(allSettings);
+#ifndef SIMULATOR
+  uint8_t alternateOtaAppIndex = 0;
+  if (HalSystem::getAlternateOtaAppIndex(alternateOtaAppIndex) && alternateOtaAppIndex <= 1) {
+    const StrId label =
+        alternateOtaAppIndex == 0 ? StrId::STR_SWITCH_TO_APP0 : StrId::STR_SWITCH_TO_APP1;
+    systemSettings.push_back(SettingInfo::Action(label, SettingAction::SwitchBootPartition));
+  }
+#endif
   systemDeviceSettings = buildSystemDeviceSettingsList(allSettings);
   systemFilesCacheSettings = buildSystemFilesCacheSettingsList(allSettings);
   systemReadingStatsSettings = buildSystemReadingStatsSettingsList(allSettings);
@@ -749,6 +758,13 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::SdFirmwareUpdate:
         startActivityForResult(std::make_unique<SdFirmwareUpdateActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::SwitchBootPartition:
+#ifndef SIMULATOR
+        if (!HalSystem::switchToAlternateOtaApp()) {
+          LOG_ERR("SET", "Failed to switch boot partition");
+        }
+#endif
         break;
       case SettingAction::DownloadFonts:
         startActivityForResult(std::make_unique<FontDownloadActivity>(renderer, mappedInput),

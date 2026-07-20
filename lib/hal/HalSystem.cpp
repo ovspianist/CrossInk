@@ -7,6 +7,7 @@
 #include "HalStorage.h"
 #include "Logging.h"
 #include "esp_debug_helpers.h"
+#include "esp_ota_ops.h"
 #include "esp_private/esp_cpu_internal.h"
 #include "esp_private/esp_system_attr.h"
 #include "esp_private/panic_internal.h"
@@ -68,6 +69,35 @@ void IRAM_ATTR __wrap_panic_print_backtrace(const void* frame, int core) {
   __real_panic_print_backtrace(frame, core);
 }
 }
+
+namespace {
+constexpr uint32_t kMaxOtaAppPartitions = 16;
+
+const esp_partition_t* findAlternateOtaPartition(uint8_t* appIndex) {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!running) {
+    LOG_ERR("BOOT", "running app partition not found");
+    return nullptr;
+  }
+
+  const esp_partition_t* alternate = esp_ota_get_next_update_partition(running);
+  if (!alternate || alternate == running || alternate->type != ESP_PARTITION_TYPE_APP) {
+    LOG_ERR("BOOT", "alternate OTA app partition not found");
+    return nullptr;
+  }
+
+  const uint32_t subtype = static_cast<uint32_t>(alternate->subtype);
+  const uint32_t ota0Subtype = static_cast<uint32_t>(ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  if (subtype < ota0Subtype || subtype - ota0Subtype >= kMaxOtaAppPartitions) {
+    LOG_ERR("BOOT", "alternate partition is not an OTA app (subtype=0x%02X)",
+            static_cast<unsigned>(alternate->subtype));
+    return nullptr;
+  }
+
+  if (appIndex) *appIndex = static_cast<uint8_t>(subtype - ota0Subtype);
+  return alternate;
+}
+}  // namespace
 
 namespace HalSystem {
 
@@ -145,6 +175,25 @@ std::string getPanicInfo(bool full) {
 bool isRebootFromPanic() {
   const auto resetReason = esp_reset_reason();
   return resetReason == ESP_RST_PANIC || resetReason == ESP_RST_CPU_LOCKUP;
+}
+
+bool getAlternateOtaAppIndex(uint8_t& appIndex) { return findAlternateOtaPartition(&appIndex) != nullptr; }
+
+bool switchToAlternateOtaApp() {
+  uint8_t appIndex = 0;
+  const esp_partition_t* alternate = findAlternateOtaPartition(&appIndex);
+  if (!alternate) return false;
+
+  const esp_err_t result = esp_ota_set_boot_partition(alternate);
+  if (result != ESP_OK) {
+    LOG_ERR("BOOT", "failed to select app%u (%s): %s", static_cast<unsigned>(appIndex), alternate->label,
+            esp_err_to_name(result));
+    return false;
+  }
+
+  LOG_INF("BOOT", "selected app%u (%s); restarting", static_cast<unsigned>(appIndex), alternate->label);
+  ESP.restart();
+  return true;
 }
 
 }  // namespace HalSystem

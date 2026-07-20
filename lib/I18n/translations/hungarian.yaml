@@ -465,4 +465,6 @@ STR_NEARBY_POSITION_TIMEOUT: "A pozíció szinkron időtúllépés miatt megszak
 STR_NEARBY_POSITION_NO_READER: "Nem található közeli olvasó"
 STR_NEARBY_LABEL: "Közeli:"
 STR_APPLY_NEARBY_POSITION: "Közeli pozíció alkalmazása"
+STR_SWITCH_TO_APP0: "Váltás app0-ra"
+STR_SWITCH_TO_APP1: "Váltás app1-re"
 STR_NEARBY_POSITION_SIMULATOR_UNAVAILABLE: "A közeli pozíció szinkron nem érhető el a szimulátorban"

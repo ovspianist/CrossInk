@@ -517,4 +517,6 @@ STR_NEARBY_POSITION_TIMEOUT: "Время синхронизации позици
 STR_NEARBY_POSITION_NO_READER: "Читалка рядом не найдена"
 STR_NEARBY_LABEL: "Рядом:"
 STR_APPLY_NEARBY_POSITION: "Применить позицию рядом"
+STR_SWITCH_TO_APP0: "Переключиться на app0"
+STR_SWITCH_TO_APP1: "Переключиться на app1"
 STR_NEARBY_POSITION_SIMULATOR_UNAVAILABLE: "Синхронизация позиции рядом недоступна в симуляторе"

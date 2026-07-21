@@ -3,6 +3,7 @@
 ### Added
 
 - System settings can switch to the alternate OTA app partition and restart into its firmware.
+- Recent EPUB openings, list removals, and approximate reading positions can be shared with Nous through `/.nous-crossink-reader-sync/` when switching OTA app partitions.
 
 ## [v1.4.0] - 2026-07-10
 

@@ -42,6 +42,7 @@
 #include "QrDisplayActivity.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
+#include "ReaderSyncStore.h"
 #include "SdCardFontSystem.h"
 #include "WordRef.h"
 #include "activities/util/ConfirmationActivity.h"
@@ -1760,6 +1761,23 @@ void EpubReaderActivity::onEnter() {
       }
       LOG_DBG("ERS", "Loaded cache: %d, %d", currentSpineIndex, nextPageNumber);
     }
+
+    ReaderSyncStore::Position sharedPosition;
+    if (ReaderSyncStore::loadNousPosition(epub->getPath(), sharedPosition) &&
+        sharedPosition.spineIndex < epub->getSpineItemsCount()) {
+      currentSpineIndex = sharedPosition.spineIndex;
+      nextPageNumber = 0;
+      cachedSpineIndex = currentSpineIndex;
+      cachedChapterPageNumber = 0;
+      cachedChapterTotalPageCount = 0;
+      pendingSpineProgress = static_cast<float>(sharedPosition.intraSpinePpm) /
+                             static_cast<float>(ReaderSyncStore::POSITION_SCALE);
+      pendingPercentJump = true;
+      sharedPositionImported = true;
+      sharedPositionStartCaptured = false;
+      LOG_DBG("RSYNC", "Imported Nous position: spine=%u ppm=%lu", sharedPosition.spineIndex,
+              static_cast<unsigned long>(sharedPosition.intraSpinePpm));
+    }
   }
   // We may want a better condition to detect if we are opening for the first time.
   // This will trigger if the book is re-opened at Chapter 0.
@@ -1794,6 +1812,9 @@ void EpubReaderActivity::onEnter() {
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addOrUpdateBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+  if (!ReaderSyncStore::recordBookOpened(epub->getPath(), epub->getTitle(), epub->getAuthor())) {
+    LOG_ERR("RSYNC", "Could not export recent-book event");
+  }
 
   // Trigger first update
   requestUpdate();
@@ -1847,6 +1868,18 @@ void EpubReaderActivity::onExit() {
   if (footnoteDepth > 0 && epub) {
     const SavedPosition& origin = savedPositions[0];
     saveProgress(origin.spineIndex, origin.pageNumber, 0);
+  }
+
+  if (footnoteDepth == 0 && epub && section) {
+    const bool movedSinceImport = !sharedPositionImported ||
+                                  (sharedPositionStartCaptured &&
+                                   (currentSpineIndex != sharedPositionStartSpine ||
+                                    section->currentPage != sharedPositionStartPage));
+    if (movedSinceImport &&
+        !ReaderSyncStore::saveCrossInkPosition(epub->getPath(), epub->getTitle(), epub->getAuthor(),
+                                               currentSpineIndex, section->currentPage, section->pageCount)) {
+      LOG_ERR("RSYNC", "Could not export reader position");
+    }
   }
 
   BOOKMARKS.unload();
@@ -4107,6 +4140,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     LOG_DBG("ERS", "Rendered page in %dms", millis() - start);
   }
   if (!activeFootnotePreview) {
+    if (sharedPositionImported && !sharedPositionStartCaptured) {
+      sharedPositionStartSpine = currentSpineIndex;
+      sharedPositionStartPage = section->currentPage;
+      sharedPositionStartCaptured = true;
+    }
     if (!saveProgress(currentSpineIndex, section->currentPage, section->pageCount)) {
       pendingSyncSaveError = true;
     }

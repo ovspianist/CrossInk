@@ -16,6 +16,7 @@ Keep this file focused on repo-specific gotchas that are worth reusing in future
 ## Real Hardware / Storage
 
 - SdFat on hardware allows only one open reader per file path at a time. If a fallback needs to reopen the same file, close the first handle before reopening.
+- Nous interoperability records live under `/.nous-crossink-reader-sync/`. The shared coordinate is an OPF spine index plus an intra-spine parts-per-million value, and recent removals use a sequenced state tombstone rather than deleting the record. Implementations must preserve the versioned binary contract in `docs/file-formats.md` and keep each firmware's native progress intact.
 
 ## Rendering / Reader Pipeline
 

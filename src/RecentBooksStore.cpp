@@ -129,6 +129,22 @@ bool RecentBooksStore::pruneMissing() {
   return recentBooks.size() != before;
 }
 
+bool RecentBooksStore::replaceFromSync(std::vector<RecentBook> books) {
+  if (books.size() > MAX_RECENT_BOOKS) books.resize(MAX_RECENT_BOOKS);
+  books.erase(std::remove_if(books.begin(), books.end(), &isMissing), books.end());
+
+  const bool unchanged = books.size() == recentBooks.size() &&
+                         std::equal(books.begin(), books.end(), recentBooks.begin(), [](const RecentBook& lhs,
+                                                                                       const RecentBook& rhs) {
+                           return lhs.path == rhs.path && lhs.title == rhs.title && lhs.author == rhs.author &&
+                                  lhs.coverBmpPath == rhs.coverBmpPath;
+                         });
+  if (unchanged) return false;
+  recentBooks = std::move(books);
+  saveToFile();
+  return true;
+}
+
 RecentBook RecentBooksStore::getDataFromBook(std::string path) const {
   std::string lastBookFileName = "";
   const size_t lastSlash = path.find_last_of('/');

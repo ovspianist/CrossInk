@@ -12,6 +12,7 @@
 #include "FileBrowserActionActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "ReaderSyncStore.h"
 #include "activities/reader/EpubReaderActivity.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "activities/util/OptionSelectionActivity.h"
@@ -162,6 +163,9 @@ void RecentBooksActivity::promptRemoveBook(const std::string& path, const std::s
     if (res.isCancelled) {
       LOG_DBG("RBA", "Remove from recents cancelled");
       return;
+    }
+    if (!ReaderSyncStore::recordBookRemoved(path)) {
+      LOG_ERR("RBA", "Failed to sync removal from recents: %s", path.c_str());
     }
     if (RECENT_BOOKS.removeByPath(path)) {
       LOG_DBG("RBA", "Removed from recents: %s", path.c_str());

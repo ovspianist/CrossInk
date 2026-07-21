@@ -5,6 +5,58 @@ All POD fields are written in the ESP32 little-endian representation used by
 `Serialization.h`; strings are length-prefixed UTF-8 unless a format notes a
 fixed-size char buffer.
 
+## `/.nous-crossink-reader-sync/`
+
+### Version 1
+
+CrossInk and Nous use this shared SD-card directory to exchange recent EPUB
+openings and approximate reading positions. It supplements each firmware's
+native data; it does not replace native progress, statistics, bookmarks, or
+settings.
+
+Paths are canonical SD-root-relative UTF-8 paths such as `/Books/example.epub`.
+Nous removes its `/sdcard` mount prefix before reading or writing a record.
+Each record is named `books/<hash>.ncrs`, where `hash` is the lowercase,
+16-digit hexadecimal FNV-1a 64-bit hash of the canonical path.
+
+Each record has a 32-byte little-endian header followed immediately by the raw
+UTF-8 path, title, and author bytes:
+
+| Offset | Size | Field |
+|---:|---:|---|
+| 0 | 8 | Magic `NCRSYNC1` |
+| 8 | 1 | Format version (`1`) |
+| 9 | 1 | Position source: `0` none, `1` CrossInk, `2` Nous |
+| 10 | 1 | Recent state: `0` legacy/none, `1` present, `2` removed |
+| 11 | 1 | Reserved, zero |
+| 12 | 4 | Recent open-or-remove event sequence |
+| 16 | 4 | Position sequence |
+| 20 | 4 | Intra-spine position in parts per million (`0`–`1000000`) |
+| 24 | 2 | Zero-based OPF spine index |
+| 26 | 2 | Path byte length (maximum `768`) |
+| 28 | 2 | Title byte length (maximum `512`) |
+| 30 | 2 | Author byte length (maximum `512`) |
+
+`counter-v1.bin` is 12 bytes: the magic `NCRSEQ01` followed by the latest
+shared `uint32_t` sequence. Either firmware can advance this counter. If it is
+missing or invalid, implementations recover by scanning the valid book
+records for the largest sequence.
+
+The recent sequence identifies the latest open-or-remove event. Legacy records
+with recent state `0` and a nonzero recent sequence are treated as present.
+Removing a book from Recent Books writes state `2` without deleting the shared
+record or position; a later book-open event writes a newer sequence and state
+`1`, making it recent again. Older version-1 implementations ignore the state
+byte, so they remain able to read and update the record but do not apply a
+removal until both installed firmwares include tombstone support.
+
+Readers reject unsupported versions, invalid sources or positions, oversized
+strings, path-hash collisions, and files whose exact size does not match the
+header. Writers promote a complete temporary file and retain a short-lived
+`.bak` file while replacing an existing record. A firmware imports only a
+position last written by the other firmware, avoiding repeated approximation
+of its own exported position.
+
 ## `book.bin`
 
 ### Version 8

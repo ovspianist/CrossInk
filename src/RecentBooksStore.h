@@ -69,6 +69,11 @@ class RecentBooksStore : public PersistableStore<RecentBooksStore> {
   // Get the list of recent books (most recent first)
   const std::vector<RecentBook>& getBooks() const { return recentBooks; }
 
+  // Replace the ordered list from the shared Nous/CrossInk reader-sync store.
+  // The caller must supply most-recent-first entries; the native 18-book cap is
+  // enforced here and the file is written at most once.
+  bool replaceFromSync(std::vector<RecentBook> books);
+
   // Get the count of recent books
   int getCount() const { return static_cast<int>(recentBooks.size()); }
 

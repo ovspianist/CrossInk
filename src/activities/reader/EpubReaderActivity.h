@@ -94,6 +94,10 @@ class EpubReaderActivity final : public Activity {
   uint16_t pendingClippingIndex = UINT16_MAX;
   bool pendingScreenshot = false;
   bool pendingSyncSaveError = false;
+  bool sharedPositionImported = false;
+  bool sharedPositionStartCaptured = false;
+  int sharedPositionStartSpine = 0;
+  int sharedPositionStartPage = 0;
   bool skipNextButtonCheck = false;  // Skip button processing for one frame after subactivity exit
   bool automaticPageTurnActive = false;
   bool longPressMenuHandled = false;
